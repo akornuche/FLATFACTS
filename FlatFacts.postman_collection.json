@@ -1,0 +1,152 @@
+{
+  "info": {
+    "_postman_id": "flatfacts-api-collection",
+    "name": "FlatFacts API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register User",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"yourpassword\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users"] }
+      }
+    },
+    {
+      "name": "Login (Credentials)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "csrfToken", "value": "{{csrfToken}}" },
+            { "key": "email", "value": "test@example.com" },
+            { "key": "password", "value": "yourpassword" }
+          ]
+        },
+        "url": { "raw": "http://localhost:3000/api/auth/callback/credentials", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "callback", "credentials"] }
+      }
+    },
+    {
+      "name": "Upload Image",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "file", "type": "file", "src": "" }
+          ]
+        },
+        "url": { "raw": "http://localhost:3000/api/upload", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "upload"] }
+      }
+    },
+    {
+      "name": "Create Review (Anonymous Allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"My Review\",\n  \"content\": \"This is a review.\",\n  \"tags\": \"tag1,tag2\",\n  \"location\": \"Lagos\",\n  \"image\": \"/uploads/your-uploaded-file.jpg\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/reviews", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "reviews"] }
+      }
+    },
+    {
+      "name": "Get All Reviews",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "http://localhost:3000/api/reviews", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "reviews"] }
+      }
+    },
+    {
+      "name": "Update Review",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Updated Title\",\n  \"content\": \"Updated content\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/reviews/{{reviewId}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "reviews", "{{reviewId}}"] }
+      }
+    },
+    {
+      "name": "Delete Review",
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "http://localhost:3000/api/reviews/{{reviewId}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "reviews", "{{reviewId}}"] }
+      }
+    },
+    {
+      "name": "Create Comment (Anonymous Allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reviewId\": \"REVIEW_ID\",\n  \"content\": \"This is a comment.\",\n  \"parentId\": null,\n  \"image\": \"/uploads/your-uploaded-file.jpg\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/comments", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "comments"] }
+      }
+    },
+    {
+      "name": "Get All Comments",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "http://localhost:3000/api/comments", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "comments"] }
+      }
+    },
+    {
+      "name": "Update Comment",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"Updated comment\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/comments/{{commentId}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "comments", "{{commentId}}"] }
+      }
+    },
+    {
+      "name": "Delete Comment",
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "http://localhost:3000/api/comments/{{commentId}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "comments", "{{commentId}}"] }
+      }
+    },
+    {
+      "name": "Vote Review or Comment",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"USER_ID\",\n  \"reviewId\": \"REVIEW_ID\",\n  \"value\": 1\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/votes", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "votes"] }
+      }
+    }
+  ]
+} 

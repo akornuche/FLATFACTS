@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String   @unique
+  password  String
+  image     String?  // Optional profile image
+  isAdmin   Boolean  @default(false)
+  reviews   Review[] @relation("UserReviews")
+  comments  Comment[] @relation("UserComments")
+  votes     Vote[] @relation("UserVotes")
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  user      User?    @relation(fields: [userId], references: [id], name: "UserReviews")
+  userId    String?  @db.ObjectId
+  title     String
+  content   String
+  tags      String    // Comma-separated tags
+  location  String
+  image     String?   // Optional image URL
+  comments  Comment[] @relation("ReviewComments")
+  votes     Vote[] @relation("ReviewVotes")
+  createdAt DateTime  @default(now())
+}
+
+model Comment {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  review     Review    @relation(fields: [reviewId], references: [id], name: "ReviewComments")
+  reviewId   String    @db.ObjectId
+  user       User?     @relation(fields: [userId], references: [id], name: "UserComments")
+  userId     String?   @db.ObjectId
+  content    String
+  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parentId   String?   @db.ObjectId
+  replies    Comment[] @relation("CommentReplies")
+  votes      Vote[]    @relation("CommentVotes")
+  createdAt  DateTime  @default(now())
+}
+
+model Vote {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id], name: "UserVotes")
+  userId     String   @db.ObjectId
+  review     Review?  @relation(fields: [reviewId], references: [id], name: "ReviewVotes")
+  reviewId   String?  @db.ObjectId
+  comment    Comment? @relation(fields: [commentId], references: [id], name: "CommentVotes")
+  commentId  String?  @db.ObjectId
+  value      Int      // 1 for upvote, -1 for downvote
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, reviewId])
+  @@unique([userId, commentId])
+}

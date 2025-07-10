@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlatFacts Backend Endpoint Tester</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 FlatFacts Backend Endpoint Tester</h1>
+    
+    <div class="test">
+        <h3>1. Send OTP</h3>
+        <button onclick="testSendOTP()">Test Send OTP</button>
+        <div id="send-otp-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>2. Verify OTP (will fail without real OTP)</h3>
+        <button onclick="testVerifyOTP()">Test Verify OTP</button>
+        <div id="verify-otp-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>3. Onboarding (will fail without real UID)</h3>
+        <button onclick="testOnboarding()">Test Onboarding</button>
+        <div id="onboarding-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>4. Get User Profile (will fail without real UID)</h3>
+        <button onclick="testGetUserProfile()">Test Get User Profile</button>
+        <div id="user-profile-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>5. Prelaunch Username (MongoDB)</h3>
+        <button onclick="testPrelaunchUsername()">Test Prelaunch Username</button>
+        <div id="prelaunch-username-result"></div>
+    </div>
+
+    <div class="test info">
+        <h3>📝 Notes</h3>
+        <ul>
+            <li>OTP verification will fail without a real OTP from the send-otp endpoint</li>
+            <li>Onboarding and user profile will fail without real UIDs</li>
+            <li>This is expected behavior for testing without real data</li>
+        </ul>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:3000/api';
+
+        async function testEndpoint(method, endpoint, data = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(`${BASE_URL}${endpoint}`, options);
+                const result = await response.json();
+                
+                return { 
+                    status: response.status, 
+                    data: result,
+                    success: response.ok 
+                };
+            } catch (error) {
+                return { 
+                    status: 'ERROR', 
+                    data: { error: error.message },
+                    success: false 
+                };
+            }
+        }
+
+        function displayResult(elementId, result) {
+            const element = document.getElementById(elementId);
+            const className = result.success ? 'success' : 'error';
+            element.className = className;
+            element.innerHTML = `
+                <h4>Status: ${result.status}</h4>
+                <pre>${JSON.stringify(result.data, null, 2)}</pre>
+            `;
+        }
+
+        async function testSendOTP() {
+            const result = await testEndpoint('POST', '/send-otp', {
+                email: 'test@example.com'
+            });
+            displayResult('send-otp-result', result);
+        }
+
+        async function testVerifyOTP() {
+            const result = await testEndpoint('POST', '/verify-otp', {
+                email: 'test@example.com',
+                otp: '123456',
+                password: 'testpassword123'
+            });
+            displayResult('verify-otp-result', result);
+        }
+
+        async function testOnboarding() {
+            const result = await testEndpoint('POST', '/onboarding', {
+                uid: 'fake-uid-123',
+                username: 'testuser',
+                avatar: 'avatar1'
+            });
+            displayResult('onboarding-result', result);
+        }
+
+        async function testGetUserProfile() {
+            const result = await testEndpoint('GET', '/user-profile?uid=fake-uid-123');
+            displayResult('user-profile-result', result);
+        }
+
+        async function testPrelaunchUsername() {
+            const result = await testEndpoint('GET', '/prelaunch-username?email=john@example.com');
+            displayResult('prelaunch-username-result', result);
+        }
+    </script>
+</body>
+</html> 

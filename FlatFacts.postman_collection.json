@@ -14,7 +14,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"yourpassword\"\n}"
+          "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"yourpassword\",\n  \"confirmPassword\": \"yourpassword\"\n}"
         },
         "url": { "raw": "http://localhost:3000/api/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users"] }
       }
@@ -35,6 +35,20 @@
           ]
         },
         "url": { "raw": "http://localhost:3000/api/auth/callback/credentials", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "callback", "credentials"] }
+      }
+    },
+    {
+      "name": "Google OAuth Sign In",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "http://localhost:3000/api/auth/signin/google", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "signin", "google"] }
+      }
+    },
+    {
+      "name": "Apple OAuth Sign In",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "http://localhost:3000/api/auth/signin/apple", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "signin", "apple"] }
       }
     },
     {

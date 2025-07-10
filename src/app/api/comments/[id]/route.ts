@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/authOptions';
@@ -6,12 +6,12 @@ import { authOptions } from '../../auth/authOptions';
 const prisma = new PrismaClient();
 
 // PATCH: Update a comment by ID
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return NextResponse.json({ error: 'You must login to update a comment.' }, { status: 401 });
   }
-  const data = await req.json();
+  const data = await request.json();
   const comment = await prisma.comment.update({
     where: { id: params.id },
     data,
@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // DELETE: Delete a comment by ID
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return NextResponse.json({ error: 'You must login to delete a comment.' }, { status: 401 });

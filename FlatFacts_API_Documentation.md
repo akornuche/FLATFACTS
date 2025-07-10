@@ -7,13 +7,19 @@
 **Body (JSON):**
 ```json
 {
-  "name": "User Name",
   "email": "user@example.com",
-  "password": "password"
+  "password": "password",
+  "confirmPassword": "password"
 }
 ```
 **Response:**  
 Returns the created user (without password). Email must be unique.
+
+**Validation:**
+- Email, password, and confirm password are required
+- Passwords must match
+- Password must be at least 6 characters long
+- Email must be unique (409 error if already exists)
 
 ---
 
@@ -23,6 +29,25 @@ Returns the created user (without password). Email must be unique.
 - `csrfToken`: (get from `/api/auth/csrf`)
 - `email`: user email
 - `password`: user password
+
+**Response:**  
+Sets a session cookie for authenticated requests.
+
+---
+
+### OAuth Authentication
+
+#### Google OAuth
+**GET** `/api/auth/signin/google`  
+Redirects to Google OAuth consent screen.
+
+#### Apple OAuth  
+**GET** `/api/auth/signin/apple`  
+Redirects to Apple OAuth consent screen.
+
+#### OAuth Callbacks
+- **Google**: `/api/auth/callback/google`
+- **Apple**: `/api/auth/callback/apple`
 
 **Response:**  
 Sets a session cookie for authenticated requests.

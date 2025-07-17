@@ -79,21 +79,69 @@ Use this `filePath` in review or comment creation.
 
 ---
 
-## Reviews
+## Profile Management
 
-### Create a Review (Anonymous Allowed)
-**POST** `/api/reviews`  
+### Update User Profile
+**PATCH** `/api/user/profile`
+
 **Body (JSON):**
 ```json
 {
+  "userId": "USER_ID", // (in production, this comes from session)
+  "username": "newDisplayName", // optional
+  "avatar": "newAvatarUrl"      // optional
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "USER_ID",
+    "name": "newDisplayName",
+    "image": "newAvatarUrl",
+    ...
+  }
+}
+```
+
+**Behavior:**
+- Requires authentication (userId must be present; in production, use session).
+- Updates the user's display name and/or avatar.
+- Propagates changes to all reviews and comments by that user (updates `userName` and `userAvatar` fields for instant feed reflection).
+- Returns the updated user object.
+
+---
+
+## Reviews (Updated)
+
+### Create a Review (Authenticated, Anonymous Optional)
+**POST** `/api/reviews`
+**Body (JSON):**
+```json
+{
+  "userId": "USER_ID",
+  "isAnonymous": true,
   "title": "Review Title",
   "content": "Review content",
   "tags": "tag1,tag2",
-  "location": "Location",
-  "image": "/uploads/your-uploaded-file.jpg"
+  "location": "GooglePlaceID",
+  "image": "/uploads/your-uploaded-file.jpg",
+  "star": 2
 }
 ```
-**Auth:** Not required (anonymous allowed)
+**Auth:** Required (must be logged in)
+
+**Validation:**
+- `star` must be 1, 2, or 3
+- Max 5 tags
+- `location` must be a valid Google Places ID
+
+**Behavior:**
+- Stores `userId` for all reviews
+- If `isAnonymous` is true, user's name/avatar are not shown publicly
+- `userName` and `userAvatar` are denormalized for instant feed updates
 
 ---
 
@@ -125,20 +173,26 @@ Array of reviews with user, comments, and votes.
 
 ---
 
-## Comments
+## Comments (Updated)
 
-### Create a Comment (Anonymous Allowed)
-**POST** `/api/comments`  
+### Create a Comment (Authenticated, Anonymous Optional)
+**POST** `/api/comments`
 **Body (JSON):**
 ```json
 {
   "reviewId": "REVIEW_ID",
+  "userId": "USER_ID",
+  "isAnonymous": true,
   "content": "Comment text",
-  "parentId": null,
-  "image": "/uploads/your-uploaded-file.jpg"
+  "parentId": null
 }
 ```
-**Auth:** Not required (anonymous allowed)
+**Auth:** Required (must be logged in)
+
+**Behavior:**
+- Stores `userId` for all comments
+- If `isAnonymous` is true, user's name/avatar are not shown publicly
+- `userName` and `userAvatar` are denormalized for instant feed updates
 
 ---
 

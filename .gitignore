@@ -46,3 +46,6 @@ next-env.d.ts
 
 # generated scripts
 /scripts
+ 
+ # waitlist export api
+/waitlist-export-api/

@@ -23,31 +23,42 @@ model User {
 }
 
 model Review {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  user      User?    @relation(fields: [userId], references: [id], name: "UserReviews")
-  userId    String?  @db.ObjectId
-  title     String
-  content   String
-  tags      String    // Comma-separated tags
-  location  String
-  image     String?   // Optional image URL
-  comments  Comment[] @relation("ReviewComments")
-  votes     Vote[] @relation("ReviewVotes")
-  createdAt DateTime  @default(now())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  isAnonymous Boolean  @default(false)
+  title       String
+  content     String
+  tags        String
+  location    String
+  image       String?
+  star        Int
+  userName    String?
+  userAvatar  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], name: "UserReviews")
+  comments    Comment[] @relation("ReviewComments")
+  votes       Vote[] @relation("ReviewVotes")
 }
 
 model Comment {
   id         String    @id @default(auto()) @map("_id") @db.ObjectId
-  review     Review    @relation(fields: [reviewId], references: [id], name: "ReviewComments")
   reviewId   String    @db.ObjectId
-  user       User?     @relation(fields: [userId], references: [id], name: "UserComments")
-  userId     String?   @db.ObjectId
+  userId     String    @db.ObjectId
+  isAnonymous Boolean  @default(false)
   content    String
-  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   parentId   String?   @db.ObjectId
+  userName   String?
+  userAvatar String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  review     Review    @relation(fields: [reviewId], references: [id], name: "ReviewComments")
+  user       User      @relation(fields: [userId], references: [id], name: "UserComments")
   replies    Comment[] @relation("CommentReplies")
   votes      Vote[]    @relation("CommentVotes")
-  createdAt  DateTime  @default(now())
+  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model Vote {

@@ -11,13 +11,25 @@ export async function GET() {
   return NextResponse.json(comments);
 }
 
-// POST: Create a new comment (anonymous allowed)
+// POST: Create a new comment (authentication required)
 export async function POST(req: NextRequest) {
   const data = await req.json();
+
+  // Require userId (must be authenticated)
+  if (!data.userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  // Validate required fields
+  if (!data.reviewId || !data.content) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+
   const comment = await prisma.comment.create({
     data: {
       reviewId: data.reviewId,
-      userId: data.userId || null, // allow null for anonymous
+      userId: data.userId,
+      isAnonymous: !!data.isAnonymous,
       content: data.content,
       parentId: data.parentId || null,
     },

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { MongoClient } from 'mongodb';
 
-const uri = 'mongodb+srv://southcircleandco:eD3t14Y3OtZpp5Ws@waitlist.kh2fkme.mongodb.net/test?retryWrites=true&w=majority&appName=Waitlist';
-const dbName = 'test';
+const uri = 'mongodb+srv:;
+  const dbName = 'test';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '../../firebaseConfig';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
+import { google } from 'googleapis';
 
 function generateOTP(length = 6) {
   return Math.floor(100000 + Math.random() * 900000).toString().slice(0, length);
@@ -18,12 +19,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  // ✅ Check required SMTP environment variables
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
+  // ✅ Check required Gmail API environment variables
+  const {
+    OAUTH_CLIENT_ID,
+    OAUTH_CLIENT_SECRET,
+    OAUTH_REFRESH_TOKEN,
+    OAUTH_SENDER_EMAIL,
+  } = process.env;
 
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
-    console.error('Missing SMTP environment variables');
-    return res.status(500).json({ error: 'SMTP configuration missing' });
+  if (!OAUTH_CLIENT_ID || !OAUTH_CLIENT_SECRET || !OAUTH_REFRESH_TOKEN || !OAUTH_SENDER_EMAIL) {
+    console.error('Missing Gmail OAuth environment variables');
+    return res.status(500).json({ error: 'Gmail API configuration missing' });
   }
 
   const otp = generateOTP();
@@ -36,26 +42,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       expiresAt,
     });
 
-    // ✅ Configure transporter
+    // ✅ Configure OAuth2 client
+    const OAuth2 = google.auth.OAuth2;
+    const oauth2Client = new OAuth2(
+      OAUTH_CLIENT_ID,
+      OAUTH_CLIENT_SECRET,
+      'https://developers.google.com/oauthplayground' // Redirect URL
+    );
+
+    oauth2Client.setCredentials({
+      refresh_token: OAUTH_REFRESH_TOKEN,
+    });
+    
+    const accessToken = await oauth2Client.getAccessToken();
+
+    // ✅ Configure transporter with Gmail and OAuth2
     const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: parseInt(SMTP_PORT),
-      secure: false, // for TLS (Gmail requires this on port 587)
+      service: 'gmail',
       auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
+        type: 'OAuth2',
+        user: OAUTH_SENDER_EMAIL,
+        clientId: OAUTH_CLIENT_ID,
+        clientSecret: OAUTH_CLIENT_SECRET,
+        refreshToken: OAUTH_REFRESH_TOKEN,
+        accessToken: accessToken.token as string,
       },
     });
-
-    // ✅ Verify transporter connection
-    console.log('Verifying SMTP transporter...');
-    await transporter.verify();
-    console.log('SMTP transporter verified and ready to send.');
 
     // ✅ Send the email
     console.log(`Sending OTP email to: ${email}`);
     await transporter.sendMail({
-      from: SMTP_FROM,
+      from: OAUTH_SENDER_EMAIL,
       to: email,
       subject: 'Your FlatFacts OTP Code',
       text: `Your OTP code is: ${otp}`,

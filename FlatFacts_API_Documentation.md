@@ -13,7 +13,7 @@
 }
 ```
 **Response:**  
-Returns the created user (without password). Email must be unique.
+Returns the created user (without password). Email must be unique. After user creation, the system attempts to migrate any reviews associated with their email from the waitlist database.
 
 **Validation:**
 - Email, password, and confirm password are required
@@ -39,11 +39,11 @@ Sets a session cookie for authenticated requests.
 
 #### Google OAuth
 **GET** `/api/auth/signin/google`  
-Redirects to Google OAuth consent screen.
+Redirects to Google OAuth consent screen. On new user creation, the system attempts to migrate any reviews associated with their email from the waitlist database.
 
 #### Apple OAuth  
 **GET** `/api/auth/signin/apple`  
-Redirects to Apple OAuth consent screen.
+Redirects to Apple OAuth consent screen. On new user creation, the system attempts to migrate any reviews associated with their email from the waitlist database.
 
 #### OAuth Callbacks
 - **Google**: `/api/auth/callback/google`
@@ -64,21 +64,6 @@ Clears the session cookie and logs out the user.
 
 ---
 
-## Image Upload
-
-### Upload an Image
-**POST** `/api/upload`  
-**Body:** `form-data`  
-- Key: `file` (type: File)
-
-**Response:**
-```json
-{ "filePath": "/uploads/your-uploaded-file.jpg" }
-```
-Use this `filePath` in review or comment creation.
-
----
-
 ## Profile Management
 
 ### Update User Profile
@@ -87,11 +72,11 @@ Use this `filePath` in review or comment creation.
 **Body (JSON):**
 ```json
 {
-  "userId": "USER_ID", // (in production, this comes from session)
   "username": "newDisplayName", // optional
   "avatar": "newAvatarUrl"      // optional
 }
 ```
+**Auth:** Session cookie required.
 
 **Response:**
 ```json
@@ -107,10 +92,99 @@ Use this `filePath` in review or comment creation.
 ```
 
 **Behavior:**
-- Requires authentication (userId must be present; in production, use session).
 - Updates the user's display name and/or avatar.
 - Propagates changes to all reviews and comments by that user (updates `userName` and `userAvatar` fields for instant feed reflection).
 - Returns the updated user object.
+
+---
+
+## Settings
+
+### Get User Settings
+**GET** `/api/settings`
+**Auth:** Session cookie required.
+**Response:**
+```json
+{
+  "email": "user@example.com",
+  "hasPassword": true
+}
+```
+**Behavior:**
+- Returns the logged-in user's email.
+- `hasPassword` is `true` if the user registered with a password, and `false` if they used an OAuth provider. This is used to conditionally show a "Change Password" option on the frontend.
+
+---
+
+### Change Password
+**POST** `/api/settings/change-password`
+**Auth:** Session cookie required.
+**Body (JSON):**
+```json
+{
+  "currentPassword": "old-password",
+  "newPassword": "new-secure-password",
+  "confirmNewPassword": "new-secure-password"
+}
+```
+**Response:**
+```json
+{ "success": true, "message": "Password changed successfully" }
+```
+**Behavior:**
+- Only works for users who have a password (i.e., did not register via OAuth).
+- Verifies the `currentPassword` before updating.
+- Returns an error if passwords don't match or meet length requirements.
+
+---
+
+### Submit Support Message
+**POST** `/api/settings/support`
+**Auth:** Optional. If logged in, the `userId` is associated with the message.
+**Body (JSON):**
+```json
+{
+  "name": "John Doe",
+  "email": "user@example.com",
+  "message": "I need help with..."
+}
+```
+**Response:**
+```json
+{ "success": true, "message": "Support message received. We will get back to you shortly." }
+```
+
+---
+
+### Get Terms and Conditions
+**GET** `/api/settings/terms`
+**Auth:** None.
+**Response:**
+- Returns a PDF file (`application/pdf`) containing the terms and conditions.
+
+---
+
+## Authentication (Updated)
+
+### Verify OTP
+**POST** `/api/auth/verify-otp`
+**Body (JSON):**
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+```
+**Auth:** None.
+**Response:**
+```json
+{ "success": true, "message": "Email verified successfully" }
+```
+
+**Behavior:**
+- Verifies the OTP entered by the user against the stored value in Firestore.
+- If the OTP is valid and hasn't expired, marks the user's email as verified in the Prisma database.
+- Returns an error if the OTP is invalid or expired.
 
 ---
 
@@ -121,7 +195,6 @@ Use this `filePath` in review or comment creation.
 **Body (JSON):**
 ```json
 {
-  "userId": "USER_ID",
   "isAnonymous": true,
   "title": "Review Title",
   "content": "Review content",
@@ -152,6 +225,35 @@ Array of reviews with user, comments, and votes.
 
 ---
 
+### Get My Reviews
+**GET** `/api/reviews/mine`
+**Auth:** Session cookie required.
+**Query Parameters (Optional):**
+- `q`: Search keyword (searches title and content).
+- `tag`: Filter by a specific tag.
+- `rating`: Filter by a star rating (e.g., `3`).
+- `dateFrom`: ISO date string for start of date range.
+- `dateTo`: ISO date string for end of date range.
+- `page`: Page number for pagination (default: `1`).
+- `limit`: Number of items per page (default: `10`).
+**Response:**
+```json
+{
+  "reviews": [ ... ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 50,
+    "totalPages": 5
+  }
+}
+```
+**Behavior:**
+- Returns a paginated list of reviews for the logged-in user.
+- Excludes soft-deleted reviews.
+
+---
+
 ### Update a Review
 **PATCH** `/api/reviews/{id}`  
 **Body (JSON):** (any updatable fields)
@@ -162,14 +264,15 @@ Array of reviews with user, comments, and votes.
 }
 ```
 **Auth:** Session cookie required (must be author or admin)
-**If not logged in:** Returns `{ "error": "You must login to update a review." }`
 
 ---
 
 ### Delete a Review
 **DELETE** `/api/reviews/{id}`  
 **Auth:** Session cookie required (must be author or admin)
-**If not logged in:** Returns `{ "error": "You must login to delete a review." }`
+**Behavior:**
+- Performs a **soft delete** by setting the `deletedAt` timestamp on the review. The review is hidden from user-facing lists but remains in the database.
+- A scheduled job is required to permanently delete reviews after a retention period (e.g., 30 days).
 
 ---
 
@@ -181,18 +284,12 @@ Array of reviews with user, comments, and votes.
 ```json
 {
   "reviewId": "REVIEW_ID",
-  "userId": "USER_ID",
   "isAnonymous": true,
   "content": "Comment text",
   "parentId": null
 }
 ```
 **Auth:** Required (must be logged in)
-
-**Behavior:**
-- Stores `userId` for all comments
-- If `isAnonymous` is true, user's name/avatar are not shown publicly
-- `userName` and `userAvatar` are denormalized for instant feed updates
 
 ---
 
@@ -212,14 +309,12 @@ Array of comments with user, review, votes, and replies.
 }
 ```
 **Auth:** Session cookie required (must be author or admin)
-**If not logged in:** Returns `{ "error": "You must login to update a comment." }`
 
 ---
 
 ### Delete a Comment
 **DELETE** `/api/comments/{id}`  
 **Auth:** Session cookie required (must be author or admin)
-**If not logged in:** Returns `{ "error": "You must login to delete a comment." }`
 
 ---
 
@@ -230,9 +325,7 @@ Array of comments with user, review, votes, and replies.
 **Body (JSON):**
 ```json
 {
-  "userId": "USER_ID",
   "reviewId": "REVIEW_ID",   // or "commentId": "COMMENT_ID"
-  "commentId": null,         // null if voting on a review
   "value": 1                 // 1 for upvote, -1 for downvote
 }
 ```
@@ -241,10 +334,15 @@ Array of comments with user, review, votes, and replies.
 
 ---
 
-## Notes
+## Image Upload
 
-- All endpoints that modify data (create, update, delete, vote) require the user to be authenticated (session cookie), except for anonymous review/comment creation.
-- Only the original author or an admin can update or delete reviews/comments.
-- For image uploads, first upload the image, then use the returned `filePath` in your review or comment creation.
-- Use the returned IDs from create endpoints for update/delete/vote requests.
-- Email is unique for user registration. 
+### Upload an Image
+**POST** `/api/upload`  
+**Body:** `form-data`  
+- Key: `file` (type: File)
+
+**Response:**
+```json
+{ "filePath": "/uploads/your-uploaded-file.jpg" }
+```
+Use this `filePath` in review or comment creation.

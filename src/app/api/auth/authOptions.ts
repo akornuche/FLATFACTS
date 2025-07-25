@@ -2,14 +2,14 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import AppleProvider from 'next-auth/providers/apple';
 import { PrismaAdapter } from '@auth/prisma-adapter';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma'; // Use the singleton
 import { compare } from 'bcrypt';
 import type { AuthOptions, SessionStrategy } from 'next-auth';
-
-const prisma = new PrismaClient();
+import { migrateWaitlistReviews } from '@/lib/waitlist';
+import { sendOtpToUser } from '@/lib/otp';
 
 export const authOptions: AuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma as any), // Use 'as any' to bypass potential type mismatch with singleton
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -97,4 +97,34 @@ export const authOptions: AuthOptions = {
     signIn: '/auth/signin',
     error: '/auth/error',
   },
-}; 
+  events: {
+    async createUser(message) {
+      if (!message.user.id) {
+        console.error("Could not migrate waitlist reviews: user ID not found in createUser event.");
+        return;
+      }
+      
+      // The user object in the event message is minimal. Fetch the full user object from the DB.
+      const newUser = await prisma.user.findUnique({
+        where: { id: message.user.id },
+      });
+
+      if (!newUser) {
+        console.error(`Could not find newly created user with ID: ${message.user.id}`);
+        return;
+      }
+
+      console.log("New user created via OAuth:", newUser.email);
+      // After a user is created via an OAuth provider, migrate their waitlist reviews.
+      await migrateWaitlistReviews(newUser);
+
+      // After creating the user, send OTP
+      const otpResult = await sendOtpToUser(newUser);
+       if (!otpResult.success) {
+        console.error("Failed to send OTP after OAuth registration:", otpResult.error);
+        // Consider whether to return an error or just log it.
+        // For now, we'll log it and continue, as OTP sending failure shouldn't block registration.
+      }
+    },
+  },
+};

@@ -8,11 +8,57 @@ function isValidGooglePlaceId(id: string): boolean {
   return /^Ch[A-Za-z0-9_-]{23,}$/.test(id);
 }
 
-// GET: Fetch all reviews
-export async function GET() {
+// GET: Fetch all reviews with sorting and filtering
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+
+  // --- Sorting Parameters ---
+  const sortBy = searchParams.get('sortBy'); // 'recent' or 'rating'
+  const order = searchParams.get('order');   // 'asc' or 'desc'
+
+  let orderBy: any = { createdAt: 'desc' }; // Default sort by most recent
+
+  if (sortBy === 'rating') {
+    orderBy = { star: order === 'asc' ? 'asc' : 'desc' }; // Default to desc for top rated
+  } else if (sortBy === 'recent') {
+    orderBy = { createdAt: order === 'asc' ? 'asc' : 'desc' }; // Default to desc for most recent
+  }
+
+  // --- Filtering Parameters ---
+  const tags = searchParams.get('tags');       // comma-separated string of tags
+  const location = searchParams.get('location'); // string for location
+  const starRating = searchParams.get('starRating'); // string, convert to number
+
+  let where: any = {};
+
+  if (tags) {
+    const tagsArray = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+    if (tagsArray.length > 0) {
+      // Use OR condition to find reviews that contain any of the specified tags
+      where.OR = tagsArray.map(tag => ({
+        tags: {
+          contains: tag, // Case-sensitive contains
+          mode: 'insensitive', // Make it case-insensitive
+        },
+      }));
+    }
+  }
+
+  if (location) {
+    where.location = location; // Exact match for location (Google Place ID)
+  }
+
+  if (starRating) {
+    const ratingNum = parseInt(starRating, 10);
+    if (!isNaN(ratingNum) && [1, 2, 3].includes(ratingNum)) {
+      where.star = ratingNum;
+    }
+  }
+
   const reviews = await prisma.review.findMany({
+    where,
     include: { user: true, comments: true, votes: true },
-    orderBy: { createdAt: 'desc' },
+    orderBy,
   });
   return NextResponse.json(reviews);
 }
@@ -62,4 +108,4 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json(review);
-} 
+}

@@ -2,7 +2,50 @@
 
 ## Authentication
 
-### Register a User
+### Initiate OTP (Registration/Login)
+**POST** `/api/send-otp`
+**Body (JSON):**
+```json
+{
+  "email": "user@example.com",
+  "password": "your_secure_password" // Required for new registrations
+}
+```
+**Auth:** None.
+**Response:**
+```json
+{ "success": true, "message": "OTP sent successfully." }
+```
+**Behavior:**
+- If a user with the provided email does not exist, a new user record is created in the Prisma database with the provided email, a default name, and the hashed password.
+- If the user already exists, their record is retrieved.
+- An OTP is generated and stored in Firestore, and then sent to the user's email.
+
+---
+
+### Verify OTP
+**POST** `/api/auth/verify-otp`
+**Body (JSON):**
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+```
+**Auth:** None.
+**Response:**
+```json
+{ "success": true, "message": "Email verified successfully" }
+```
+
+**Behavior:**
+- Verifies the OTP entered by the user against the stored value in Firestore.
+- If the OTP is valid and hasn't expired, it finds the user in the Prisma database and marks their email as verified.
+- Returns an error if the OTP is invalid, expired, or the user is not found.
+
+---
+
+### Register a User (Legacy/Direct)
 **POST** `/api/users`  
 **Body (JSON):**
 ```json
@@ -106,7 +149,7 @@ Clears the session cookie and logs out the user.
 **Response:**
 ```json
 {
-  "email": "user@example.com",
+  "email": "user@example.example.com",
   "hasPassword": true
 }
 ```
@@ -164,31 +207,20 @@ Clears the session cookie and logs out the user.
 
 ---
 
-## Authentication (Updated)
+## Reviews
 
-### Verify OTP
-**POST** `/api/auth/verify-otp`
-**Body (JSON):**
-```json
-{
-  "email": "user@example.com",
-  "otp": "123456"
-}
-```
-**Auth:** None.
+### Get All Reviews (Sorted & Filtered)
+**GET** `/api/reviews`
+**Query Parameters (Optional):**
+- `sortBy`: `recent` (default) or `rating`.
+- `order`: `asc` or `desc` (default for both `recent` and `rating`).
+- `tags`: Comma-separated string of tags (e.g., `tag1,tag2`). Reviews containing any of these tags will be returned (case-insensitive).
+- `location`: Google Place ID string. Reviews matching this exact location will be returned.
+- `starRating`: Integer (1, 2, or 3). Reviews with this exact star rating will be returned.
 **Response:**
-```json
-{ "success": true, "message": "Email verified successfully" }
-```
-
-**Behavior:**
-- Verifies the OTP entered by the user against the stored value in Firestore.
-- If the OTP is valid and hasn't expired, marks the user's email as verified in the Prisma database.
-- Returns an error if the OTP is invalid or expired.
+Array of reviews with user, comments, and votes.
 
 ---
-
-## Reviews (Updated)
 
 ### Create a Review (Authenticated, Anonymous Optional)
 **POST** `/api/reviews`
@@ -215,13 +247,6 @@ Clears the session cookie and logs out the user.
 - Stores `userId` for all reviews
 - If `isAnonymous` is true, user's name/avatar are not shown publicly
 - `userName` and `userAvatar` are denormalized for instant feed updates
-
----
-
-### Get All Reviews
-**GET** `/api/reviews`  
-**Response:**  
-Array of reviews with user, comments, and votes.
 
 ---
 
@@ -276,7 +301,48 @@ Array of reviews with user, comments, and votes.
 
 ---
 
-## Comments (Updated)
+### Generate Review Image Card
+**GET** `/api/reviews/generate-image`
+**Query Parameters:**
+- `reviewId`: The ID of the review to generate an image for.
+**Auth:** None.
+**Response:**
+Returns an image file (`Content-Type: image/png`) containing the designed review card.
+**Behavior:**
+- Fetches review details from the database.
+- Uses Sharp to compose an image with review content (username/anonymous, location, snippet, tags, star rating, Flatfacts logo).
+
+---
+
+## Review Reporting
+
+### Report a Review
+**POST** `/api/reports`
+**Body (JSON):**
+```json
+{
+  "reviewId": "ID_OF_REVIEW_TO_REPORT",
+  "reporterUserId": "ID_OF_REPORTING_USER",
+  "reason": "False Info" // One of: "False Info", "Offensive or Abusive", "Spam", "Duplicate Review", "Misleading Content", "Other"
+  "otherReason": "Optional text if reason is 'Other'"
+}
+```
+**Auth:** Required (must be logged in).
+**Response:**
+```json
+{ "success": true, "message": "Review reported successfully.", "reportId": "NEW_REPORT_ID" }
+```
+**Validation:**
+- `reviewId`, `reporterUserId`, `reason` are required.
+- `reason` must be one of the predefined values.
+- If `reason` is "Other", `otherReason` is required.
+**Behavior:**
+- Stores the report in the database.
+- A user can only report a specific review once. Subsequent attempts will return a 409 conflict error.
+
+---
+
+## Comments
 
 ### Create a Comment (Authenticated, Anonymous Optional)
 **POST** `/api/comments`

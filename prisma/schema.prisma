@@ -121,3 +121,18 @@ model SupportMessage {
   message   String
   createdAt DateTime @default(now())
 }
+
+model Report {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  reviewId     String    @db.ObjectId
+  reporterUserId String  @db.ObjectId
+  reason       String    // e.g., "False Info", "Offensive or Abusive", "Other"
+  otherReason  String?   // Optional text input for "Other" reason
+  createdAt    DateTime  @default(now())
+
+  // Relations
+  review       Review    @relation(fields: [reviewId], references: [id])
+  reporter     User      @relation(fields: [reporterUserId], references: [id])
+
+  @@unique([reviewId, reporterUserId]) // User can only flag once per review
+}

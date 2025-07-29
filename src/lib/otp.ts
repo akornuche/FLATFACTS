@@ -1,11 +1,9 @@
-import { PrismaClient } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import { google } from 'googleapis';
 import { User } from '@prisma/client'; // Import User type
-import { db } from '../../firebaseConfig'; // Assuming firebaseConfig is accessible
+import { db } from '../firebaseConfig'; // Assuming firebaseConfig is accessible
 import { collection, doc, setDoc } from 'firebase/firestore';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma'; // Import the Prisma singleton
 
 function generateOTP(length = 6) {
   return Math.floor(100000 + Math.random() * 900000).toString().slice(0, length);
@@ -34,6 +32,8 @@ export async function sendOtpToUser(user: User) {
   const otp = generateOTP();
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
+  console.log(`[sendOtpToUser] Generating OTP for ${email}: ${otp}, expires at ${new Date(expiresAt).toISOString()}`);
+
   try {
    
     // --- Firestore Integration (if needed, requires Firebase setup) ---
@@ -41,8 +41,9 @@ export async function sendOtpToUser(user: User) {
       otp,
       expiresAt,
     });
+    console.log(`[sendOtpToUser] OTP for ${email} successfully stored in Firestore.`);
     
-    console.log(`Generated OTP for ${email}: ${otp}`);
+    // console.log(`Generated OTP for ${email}: ${otp}`); // Moved above
 
     // ✅ Configure OAuth2 client
     const OAuth2 = google.auth.OAuth2;

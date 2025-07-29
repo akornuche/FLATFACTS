@@ -9,7 +9,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCkvHZgkrNlneFjv_Dj0Jqw3ZAyVBWiZ3k",
   authDomain: "flatfacts-a2cba.firebaseapp.com",
   projectId: "flatfacts-a2cba",
-  storageBucket: "flatfacts-a2cba.appspot.com", // <-- FIXED
+  storageBucket: "flatfacts-a2cba.firebasestorage.app", // <-- FIXED
   messagingSenderId: "671980222661",
   appId: "1:671980222661:web:3991a63651d849111098ac",
   measurementId: "G-HS21JZPZWR"

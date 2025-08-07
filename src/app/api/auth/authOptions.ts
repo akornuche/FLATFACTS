@@ -37,12 +37,17 @@ export const authOptions: AuthOptions = {
   ],
   session: {
     strategy: 'jwt',
+    maxAge: 60 * 24 * 60 * 60, // 60 days in seconds
   },
   callbacks: {
     async jwt({ token, user, account }: { token: any; user?: any; account?: any }) {
       if (user) {
         token.id = (user as any).id;
         token.isAdmin = (user as any).isAdmin;
+        token.name = (user as any).name; // Add name to JWT
+        token.email = (user as any).email; // Add email to JWT
+        token.image = (user as any).image; // Add image to JWT
+        token.verified = (user as any).verified; // Add verified to JWT
       }
       return token;
     },
@@ -50,6 +55,10 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).isAdmin = token.isAdmin;
+        (session.user as any).name = token.name; // Add name to session
+        (session.user as any).email = token.email; // Add email to session
+        (session.user as any).image = token.image; // Add image to session
+        (session.user as any).verified = token.verified; // Add verified to session
       }
       return session;
     },
